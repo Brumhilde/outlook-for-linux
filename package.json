@@ -90,6 +90,7 @@
       "packageCategory": "mail",
       "executableName": "outlook-for-linux",
       "synopsis": "Outlook for Linux",
+      "maintainer": "Brumhilde <Brumhilde@users.noreply.github.com>",
       "description": "Unofficial Microsoft Outlook client for Linux using Electron. It wraps Outlook on the web (Microsoft 365 or Outlook.com) as a standalone application with tray unread count, desktop notifications and mailto: link handling.",
       "executableArgs": [
         "--ozone-platform=x11"
