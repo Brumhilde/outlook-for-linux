@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<component type="desktop-application">
+  <id>outlook-for-linux</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0</project_license>
+  <name>Outlook for Linux</name>
+  <summary>Unofficial Microsoft Outlook client for Linux</summary>
+  <description>
+    <p>Use Outlook on the web (Microsoft 365 or Outlook.com) as a standalone desktop application with tray unread count, desktop notifications and mailto: link handling.</p>
+    <p>This application is an unofficial client and is not affiliated with Microsoft. It is based on Teams for Linux.</p>
+  </description>
+  <launchable type="desktop-id">outlook-for-linux.desktop</launchable>
+  <releases>
+    <release version="0.1.0" date="2026-09-24">
+      <description>
+        <ul>
+          <li>Initial release, forked from Teams for Linux 2.22.0</li>
+          <li>Outlook on the web wrapper with tray unread count and notifications</li>
+          <li>mailto: link handler opening Outlook compose</li>
+        </ul>
+      </description>
+    </release>
+  </releases>
+</component>

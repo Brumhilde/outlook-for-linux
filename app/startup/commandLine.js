@@ -1,0 +1,198 @@
+const { app } = require("electron");
+
+class CommandLineManager {
+  // Must be called before app.getPath('userData')
+  static addSwitchesBeforeConfigLoad() {
+    app.commandLine.appendSwitch("try-supported-channel-layouts");
+
+    // Allow audio playback without requiring a prior user gesture.
+    // Notification sounds fire in the background (no user gesture) so without
+    // this switch Chromium's autoplay policy suspends the AudioContext after
+    // the first play and rejects subsequent audio on all renderer paths.
+    app.commandLine.appendSwitch("autoplay-policy", "no-user-gesture-required");
+
+    if (app.commandLine.hasSwitch("disable-features")) {
+      const disabledFeatures = app.commandLine.getSwitchValue("disable-features").split(",");
+      if (!disabledFeatures.includes("HardwareMediaKeyHandling")) {
+        console.warn(
+          "disable-features switch already set without HardwareMediaKeyHandling. " +
+          "Web page media controls may conflict with system media key handling."
+        );
+      }
+    } else {
+      app.commandLine.appendSwitch("disable-features", "HardwareMediaKeyHandling");
+    }
+  }
+
+  static addSwitchesAfterConfigLoad(config) {
+    if (process.platform === "darwin") {
+      this.#configureMacPerformance(config);
+    }
+
+    if (process.env.XDG_SESSION_TYPE === "wayland") {
+      this.#configureWayland(config);
+    }
+
+    // Issue #2518: starting a second SharePoint download while a first is in
+    // flight kills the first stream with `ERR_QUIC_PROTOCOL_ERROR` (-356) on
+    // the shared QUIC session. The freeze is reproducible end-to-end via a
+    // chrome://net-export trace; the failing event is on the QUIC transport,
+    // not at the application layer (no Chromium download permission gate is
+    // hit, no HTTP-2-style stream prioritisation issue — independent harness
+    // testing with two parallel 100 MB downloads from `proof.ovh.net` over
+    // HTTP/2 ran in parallel just fine, so the bug is QUIC-only). Forcing
+    // HTTPS over TCP/HTTP-2 by disabling QUIC for the whole session is the
+    // smallest reliable workaround we control from the app layer; the cost
+    // is slightly higher latency on Microsoft endpoints (no UDP fast-open,
+    // no 0-RTT) which is acceptable for a chat client. Defaults to true;
+    // set `network.disableQuic` to false in config to opt back into QUIC.
+    if (config.network?.disableQuic) {
+      app.commandLine.appendSwitch("disable-quic");
+    }
+
+    // Proxy configuration
+    if (config.proxyServer) {
+      app.commandLine.appendSwitch("proxy-server", config.proxyServer);
+    }
+
+    // Custom WM_CLASS for Linux window managers.
+    // Electron 41.6.1 (backport of electron/electron#51424) changed the X11
+    // WM_CLASS path to read from the XDG App ID rather than app.getName(),
+    // and the Wayland app_id path has always read from the XDG App ID. The
+    // XDG App ID is set via app.setDesktopName(), so calling setName() alone
+    // no longer reaches either compositor. Set both so --class propagates to
+    // X11 WM_CLASS and Wayland wayland_app_id consistently (#2383).
+    if (config.class) {
+      console.info("Setting WM_CLASS property to custom value " + config.class);
+      app.setName(config.class);
+      app.setDesktopName(`${config.class}.desktop`);
+    }
+
+    // Authentication server whitelist for SSO
+    app.commandLine.appendSwitch(
+      "auth-server-whitelist",
+      config.authServerWhitelist
+    );
+
+    // GPU acceleration settings
+    if (config.disableGpu) {
+      console.info("Disabling GPU support...");
+      app.commandLine.appendSwitch("disable-gpu");
+      app.commandLine.appendSwitch("disable-gpu-compositing");
+      app.commandLine.appendSwitch("disable-software-rasterizer");
+      app.disableHardwareAcceleration();
+    }
+
+    this.addElectronCLIFlags(config);
+  }
+
+  // macOS performance optimizations for Apple Silicon and Intel Macs.
+  static #configureMacPerformance(config) {
+    // Opt-out switch (defaults on). These force a lot of GPU/rendering state
+    // on every Mac, so allow disabling them without also turning off the GPU.
+    if (config.macos?.performanceMode === false) {
+      console.info("[macOS] Performance optimizations disabled (macos.performanceMode is false)");
+      return;
+    }
+    if (config.disableGpu) {
+      return;
+    }
+    console.info("[macOS] Enabling native hardware and rendering optimizations");
+
+    // Force Metal for ANGLE rendering layer (super fast on Apple Silicon)
+    app.commandLine.appendSwitch("use-angle", "metal");
+
+    // Enable GPU/OOP rasterization and zero-copy transfers
+    app.commandLine.appendSwitch("enable-gpu-rasterization");
+    app.commandLine.appendSwitch("enable-oop-rasterization");
+    app.commandLine.appendSwitch("enable-zero-copy");
+    app.commandLine.appendSwitch("enable-native-gpu-memory-buffers");
+    app.commandLine.appendSwitch("enable-gpu-memory-buffer-video-frames");
+
+    // Optimize rasterization threads for multi-core processors
+    app.commandLine.appendSwitch("num-raster-threads", "4");
+
+    // Optimize V8 for multi-core performance. Merge rather than overwrite so a
+    // `js-flags` already set via electronCLIFlags / the command line survives
+    // (same as enable-features).
+    const performanceJsFlags = [
+      "--concurrent-recompilation",
+      "--concurrent-marking",
+      "--concurrent-sweeping",
+    ];
+    // The larger V8 heap suits Apple Silicon's unified memory; gate it to
+    // arm64 so a 4 GB old-space ceiling isn't forced on older, lower-RAM Intel
+    // Macs where it can be counter-productive.
+    if (process.arch === "arm64") {
+      performanceJsFlags.unshift("--max-semi-space-size=16", "--max-old-space-size=4096");
+    }
+    if (app.commandLine.hasSwitch("js-flags")) {
+      const existing = app.commandLine.getSwitchValue("js-flags").split(" ").filter(Boolean);
+      const merged = Array.from(new Set([...existing, ...performanceJsFlags])).join(" ");
+      app.commandLine.appendSwitch("js-flags", merged);
+    } else {
+      app.commandLine.appendSwitch("js-flags", performanceJsFlags.join(" "));
+    }
+
+    const performanceFeatures = [
+      "CanvasOopRasterization",
+      "ParallelDownloading",
+      "Metal",
+      "CoreAnimationLayersSharedImages",
+    ];
+
+    if (app.commandLine.hasSwitch("enable-features")) {
+      const existing = app.commandLine.getSwitchValue("enable-features").split(",");
+      const merged = Array.from(new Set([...existing, ...performanceFeatures])).join(",");
+      app.commandLine.appendSwitch("enable-features", merged);
+    } else {
+      app.commandLine.appendSwitch("enable-features", performanceFeatures.join(","));
+    }
+  }
+
+  // Wayland display server configuration. Native Wayland auto-disables the
+  // GPU to prevent blank windows, unless the user set disableGpu explicitly or
+  // runs under XWayland with wayland.xwaylandOptimizations on.
+  static #configureWayland(config) {
+    // Detect XWayland: ozone-platform=x11 forces X11 rendering on a Wayland session.
+    // The runtime check is needed because the same config file is used for both
+    // native Wayland and XWayland sessions.
+    const isXWayland = app.commandLine.getSwitchValue("ozone-platform") === "x11";
+    const xwaylandOptimizations = isXWayland && config.wayland?.xwaylandOptimizations;
+
+    if (config.disableGpuExplicitlySet) {
+      console.info(`[Wayland] Respecting user's disableGpu setting: ${config.disableGpu}`);
+    } else if (xwaylandOptimizations) {
+      console.info("[Wayland] XWayland mode: keeping GPU enabled (wayland.xwaylandOptimizations)");
+    } else {
+      console.info("[Wayland] Disabling GPU composition (default)");
+      config.disableGpu = true;
+    }
+  }
+
+  static addElectronCLIFlags(config) {
+    if (Array.isArray(config.electronCLIFlags)) {
+      for (const flag of config.electronCLIFlags) {
+        if (typeof flag === "string") {
+          console.debug(`Adding electron CLI flag '${flag}'`);
+          app.commandLine.appendSwitch(flag);
+        } else if (Array.isArray(flag) && typeof flag[0] === "string") {
+          const hasValidValue = flag[1] !== undefined &&
+                                 typeof flag[1] !== "object" &&
+                                 typeof flag[1] !== "function";
+          if (hasValidValue) {
+            console.debug(
+              `Adding electron CLI flag '${flag[0]}' with value '${flag[1]}'`
+            );
+            app.commandLine.appendSwitch(flag[0], flag[1]);
+          } else {
+            console.debug(`Adding electron CLI flag '${flag[0]}'`);
+            app.commandLine.appendSwitch(flag[0]);
+          }
+        }
+      }
+    }
+  }
+}
+
+module.exports = CommandLineManager;
