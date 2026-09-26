@@ -19,7 +19,7 @@ defaults:
 
 jobs:
   lint_and_audit:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
 
@@ -51,7 +51,7 @@ jobs:
         run: npm audit --audit-level=critical
 
   e2e_tests:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
 
@@ -119,7 +119,7 @@ jobs:
 
   linux_x64:
     needs: [lint_and_audit]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
 
@@ -166,7 +166,7 @@ jobs:
 
   linux_arm64:
     needs: [lint_and_audit]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
 
@@ -213,7 +213,7 @@ jobs:
 
   linux_arm:
     needs: [lint_and_audit]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
 
