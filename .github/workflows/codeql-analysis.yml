@@ -17,6 +17,9 @@ jobs:
     name: Analyze
     runs-on: ubuntu-24.04
     permissions:
+      # CodeQL reads its own workflow run; private repositories need this
+      # granted explicitly.
+      actions: read
       security-events: write
       contents: read
 
