@@ -1,6 +1,6 @@
 {
   "name": "outlook-for-linux",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "main": "app/index.js",
   "description": "Unofficial client for Microsoft Outlook for Linux",
   "homepage": "https://github.com/Brumhilde/outlook-for-linux",
