@@ -1,0 +1,21 @@
+# Changelog
+
+## [0.2.0](https://github.com/Brumhilde/outlook-for-linux/compare/v0.1.0...v0.2.0) (2026-09-26)
+
+
+### Features
+
+* initial Outlook for Linux, forked from Teams for Linux 2.22.0 ([9965530](https://github.com/Brumhilde/outlook-for-linux/commit/9965530b79c5e86253ec3a0e1d6caff729aefacb))
+
+
+### Bug Fixes
+
+* **build:** set the deb/rpm maintainer for Linux packages ([61b3dda](https://github.com/Brumhilde/outlook-for-linux/commit/61b3dda09e478b884da23ab23088313a05a76eab))
+
+
+### CI/CD
+
+* **codeql:** grant actions: read for the private repository ([df8d8eb](https://github.com/Brumhilde/outlook-for-linux/commit/df8d8eb07e4ae89ad37db624353374de3c685678))
+* drop 32-bit ARM (armv7l) builds ([e765c72](https://github.com/Brumhilde/outlook-for-linux/commit/e765c72700107d8acc76d705a2f93540d9e75abf))
+* remove the CodeQL workflow ([1814505](https://github.com/Brumhilde/outlook-for-linux/commit/181450525e6fa88429a3b03e922801a02782c52a))
+* tolerate a missing release-please PR output and pin runners to Ubuntu 24.04 ([675b43f](https://github.com/Brumhilde/outlook-for-linux/commit/675b43fcf173ae29ec2115730d39bcbce20aa950))
