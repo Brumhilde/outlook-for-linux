@@ -11,6 +11,18 @@
   </description>
   <launchable type="desktop-id">outlook-for-linux.desktop</launchable>
   <releases>
+    <release version="0.2.0" date="2026-09-26">
+      <description>
+        <ul>
+          <li>initial Outlook for Linux, forked from Teams for Linux 2.22.0</li>
+          <li>build: set the deb/rpm maintainer for Linux packages</li>
+          <li>codeql: grant actions: read for the private repository</li>
+          <li>drop 32-bit ARM (armv7l) builds</li>
+          <li>remove the CodeQL workflow</li>
+          <li>tolerate a missing release-please PR output and pin runners to Ubuntu 24.04</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.1.0" date="2026-09-24">
       <description>
         <ul>
