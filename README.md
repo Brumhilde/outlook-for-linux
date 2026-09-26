@@ -19,7 +19,7 @@ Unofficial Microsoft Outlook client for Linux. It wraps [Outlook on the web](htt
 
 ## Installation
 
-Download a package for your architecture (x64, arm64, armv7l) from the [Releases](https://github.com/Brumhilde/outlook-for-linux/releases) page:
+Download a package for your architecture (x64 or arm64) from the [Releases](https://github.com/Brumhilde/outlook-for-linux/releases) page:
 
 ```bash
 # Debian / Ubuntu
